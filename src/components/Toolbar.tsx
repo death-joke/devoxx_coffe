@@ -125,6 +125,7 @@ export function Toolbar({ availableMachines, onHelp }: ToolbarProps) {
           >
             <span style={styles.emoji}>{config.emoji}</span>
             <span style={styles.label}>{config.label}</span>
+            {config.cost > 0 && <span style={styles.cost}>💰{config.cost}</span>}
           </button>
         );
       })}
@@ -249,6 +250,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   emoji: { fontSize: 20 },
   label: { fontSize: 9, color: '#CCCCCC', textAlign: 'center', lineHeight: 1.2 },
+  cost: { fontSize: 9, color: '#FFD700', textAlign: 'center', marginTop: 2 },
   clearBtn: {
     padding: '5px 4px',
     backgroundColor: '#333',

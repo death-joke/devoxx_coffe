@@ -148,7 +148,7 @@ export const LEVELS: LevelConfig[] = [
     maxFailedOrders: 3,
     hasMachineBreakdowns: false,
     prepTimeSecs: 90,
-    budget: 400,
+    budget: 2000,
     obstacles: [
       { col: 4, row: 2 },
       { col: 7, row: 5 },
@@ -166,7 +166,7 @@ export const LEVELS: LevelConfig[] = [
     maxFailedOrders: 3,
     hasMachineBreakdowns: false,
     prepTimeSecs: 60,
-    budget: 320,
+    budget: 1700,
     obstacles: [
       { col: 3, row: 1 },
       { col: 5, row: 4 },
@@ -186,7 +186,7 @@ export const LEVELS: LevelConfig[] = [
     maxFailedOrders: 3,
     hasMachineBreakdowns: true,
     prepTimeSecs: 45,
-    budget: 280,
+    budget: 1500,
     obstacles: [
       { col: 3, row: 2 },
       { col: 4, row: 5 },

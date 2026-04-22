@@ -419,9 +419,10 @@ export class Game extends Scene {
     this.machines.set(id, machine);
     this.renderMachine(machine);
 
-    // Deduct budget
+    // Deduct budget and show cost animation
     if (this.stats.budget !== -1) {
       this.stats.budget -= cost;
+      this.showFloatingText(col, row, `-${cost}💰`, '#FFD700');
       this.emitStats();
     }
 
