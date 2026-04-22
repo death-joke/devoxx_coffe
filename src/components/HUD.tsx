@@ -31,6 +31,17 @@ export function HUD({ stats, visible, isPaused, onTogglePause }: HUDProps) {
         <span style={styles.label}>❌ Ratés</span>
         <span style={{ ...styles.value, color: '#FF5722' }}>{stats.ordersFailed}</span>
       </div>
+      {stats.budget >= 0 && (
+        <>
+          <div style={styles.separator} />
+          <div style={styles.block}>
+            <span style={styles.label}>💰 Budget</span>
+            <span style={{ ...styles.value, color: stats.budget < 50 ? '#FF5722' : '#FFD700' }}>
+              {stats.budget}
+            </span>
+          </div>
+        </>
+      )}
       <div style={{ flex: 1 }} />
       <button
         style={styles.pauseBtn}

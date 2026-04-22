@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { IRefPhaserGame, PhaserGame } from './PhaserGame';
 import { EventBus } from './game/EventBus';
 import { GameStats, MachineType } from './game/types/index';
@@ -10,6 +10,7 @@ import { LevelSummary } from './components/LevelSummary';
 import { PrepBanner } from './components/PrepBanner';
 import { PauseMenu } from './components/PauseMenu';
 import { HowToPlay } from './components/HowToPlay';
+import { GameOverOverlay } from './components/GameOverOverlay';
 
 type UIState = 'menu' | 'intro' | 'preparing' | 'playing' | 'paused' | 'summary' | 'gameover';
 
@@ -20,10 +21,11 @@ function App()
     const uiStateRef = useRef<UIState>('menu');
     const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
     const [stats, setStats] = useState<GameStats>({
-        score: 0, level: 1, ordersServed: 0, ordersFailed: 0, consecutiveFailed: 0,
+        score: 0, level: 1, ordersServed: 0, ordersFailed: 0, consecutiveFailed: 0, budget: -1,
     });
     const [summaryData, setSummaryData] = useState({ ordersServed: 0, ordersFailed: 0 });
     const [showHelp, setShowHelp] = useState(false);
+    const [gameOverData, setGameOverData] = useState({ score: 0, bestScore: 0 });
 
     const currentLevel = LEVELS[currentLevelIndex];
 
@@ -33,13 +35,13 @@ function App()
     useEffect(() => {
         EventBus.on('start-game', () => {
             setCurrentLevelIndex(0);
-            setStats({ score: 0, level: 1, ordersServed: 0, ordersFailed: 0, consecutiveFailed: 0 });
+            setStats({ score: 0, level: 1, ordersServed: 0, ordersFailed: 0, consecutiveFailed: 0, budget: -1 });
             setUiState('intro');
         });
 
         EventBus.on('auto-level-started', () => {
             setCurrentLevelIndex(0);
-            setStats({ score: 0, level: 1, ordersServed: 0, ordersFailed: 0, consecutiveFailed: 0 });
+            setStats({ score: 0, level: 1, ordersServed: 0, ordersFailed: 0, consecutiveFailed: 0, budget: -1 });
             setUiState('preparing');
         });
 
@@ -52,7 +54,8 @@ function App()
             setUiState('menu');
         });
 
-        EventBus.on('game-over', () => {
+        EventBus.on('game-over', (data: { score: number; bestScore: number }) => {
+            setGameOverData(data ?? { score: 0, bestScore: 0 });
             setUiState('gameover');
         });
 
@@ -95,6 +98,21 @@ function App()
         setUiState('playing');
         EventBus.emit('start-day');
     };
+
+    const handleReturnToMenuFromGameOver = useCallback(() => {
+        if (phaserRef.current?.game) {
+            phaserRef.current.game.scene.start('MainMenu');
+        }
+        setCurrentLevelIndex(0);
+        setStats({ score: 0, level: 1, ordersServed: 0, ordersFailed: 0, consecutiveFailed: 0, budget: -1 });
+        setUiState('menu');
+    }, []);
+
+    const handleReplayFromGameOver = useCallback(() => {
+        if (phaserRef.current?.game) {
+            phaserRef.current.game.scene.start('Game', { autoStart: true });
+        }
+    }, []);
 
     const handleNextLevel = () => {
         const next = currentLevelIndex + 1;
@@ -158,11 +176,25 @@ function App()
                 )}
 
                 {uiState === 'preparing' && (
-                    <PrepBanner levelName={currentLevel.name} onStartDay={handleStartDay} />
+                    <PrepBanner
+                        levelName={currentLevel.name}
+                        prepTimeSecs={currentLevel.prepTimeSecs}
+                        budget={stats.budget >= 0 ? stats.budget : undefined}
+                        onStartDay={handleStartDay}
+                    />
                 )}
 
                 {uiState === 'intro' && (
                     <LevelIntro level={currentLevel} onStart={handleStartLevel} />
+                )}
+
+                {uiState === 'gameover' && (
+                    <GameOverOverlay
+                        score={gameOverData.score}
+                        bestScore={gameOverData.bestScore}
+                        onMenu={handleReturnToMenuFromGameOver}
+                        onReplay={handleReplayFromGameOver}
+                    />
                 )}
 
                 {uiState === 'summary' && (

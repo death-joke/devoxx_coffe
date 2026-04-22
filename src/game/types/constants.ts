@@ -9,6 +9,7 @@ export const MACHINE_CONFIGS: Record<MachineType, MachineConfig> = {
     description: 'Broie les grains de café en café moulu. Indispensable en début de chaîne.',
     emoji: '⚙️',
     color: 0x8B4513,
+    cost: 60,
     recipe: {
       inputs: [ItemType.CoffeeBeans],
       output: ItemType.GroundCoffee,
@@ -21,6 +22,7 @@ export const MACHINE_CONFIGS: Record<MachineType, MachineConfig> = {
     description: 'Transforme le café moulu en espresso. L\'eau est intégrée à la machine.',
     emoji: '☕',
     color: 0x4A2C2A,
+    cost: 80,
     recipe: {
       inputs: [ItemType.GroundCoffee],
       output: ItemType.Espresso,
@@ -33,6 +35,7 @@ export const MACHINE_CONFIGS: Record<MachineType, MachineConfig> = {
     description: 'Chauffe et émulsionne le lait. Nécessaire pour les lattes et cappuccinos.',
     emoji: '🥛',
     color: 0xBDB59A,
+    cost: 70,
     recipe: {
       inputs: [ItemType.Milk],
       output: ItemType.HotMilk,
@@ -45,6 +48,7 @@ export const MACHINE_CONFIGS: Record<MachineType, MachineConfig> = {
     description: 'Verse l\'espresso dans une tasse (Espresso/Cappuccino) ou du lait chaud (Latte). Accepte les deux chaînes.',
     emoji: '🫙',
     color: 0xD2691E,
+    cost: 50,
     recipes: [
       { inputs: [ItemType.Espresso], output: ItemType.Coffee, durationMs: 1000 },
       { inputs: [ItemType.HotMilk],  output: ItemType.Coffee, durationMs: 1000 },
@@ -56,6 +60,7 @@ export const MACHINE_CONFIGS: Record<MachineType, MachineConfig> = {
     description: 'Transporte les ingrédients d\'une machine à l\'autre. Se connecte automatiquement vers la droite.',
     emoji: '➡️',
     color: 0x888888,
+    cost: 20,
   },
   [MachineType.Source]: {
     type: MachineType.Source,
@@ -63,6 +68,7 @@ export const MACHINE_CONFIGS: Record<MachineType, MachineConfig> = {
     description: 'Génère automatiquement des grains de café (et du lait si disponible). Fixée en zone d\'entrée.',
     emoji: '📦',
     color: 0x228B22,
+    cost: 0,
   },
   [MachineType.Output]: {
     type: MachineType.Output,
@@ -70,6 +76,7 @@ export const MACHINE_CONFIGS: Record<MachineType, MachineConfig> = {
     description: 'Point de livraison des cafés aux clients.',
     emoji: '🏁',
     color: 0xFFD700,
+    cost: 0,
   },
 };
 
@@ -127,11 +134,12 @@ export const LEVELS: LevelConfig[] = [
     orderTimeoutMs: 20000,
     maxFailedOrders: 3,
     hasMachineBreakdowns: false,
+    // Niveau 1 : pas de contraintes, tutorial libre
   },
   {
     id: 2,
     name: 'Heure du Latte',
-    description: 'Les clients veulent du lait ! Ajoute un steamer à ta chaîne.',
+    description: 'Les clients veulent du lait ! Ajoute un steamer à ta chaîne. Budget limité — optimise !',
     clientCount: 8,
     availableMachines: [MachineType.Grinder, MachineType.Brewer, MachineType.MilkSteamer, MachineType.CupFiller, MachineType.Conveyor],
     availableDrinks: [DrinkType.Espresso, DrinkType.Latte],
@@ -139,11 +147,17 @@ export const LEVELS: LevelConfig[] = [
     orderTimeoutMs: 18000,
     maxFailedOrders: 3,
     hasMachineBreakdowns: false,
+    prepTimeSecs: 90,
+    budget: 400,
+    obstacles: [
+      { col: 4, row: 2 },
+      { col: 7, row: 5 },
+    ],
   },
   {
     id: 3,
     name: 'Rush Hour',
-    description: 'Les clients arrivent en masse et veulent tout ! Optimise ton débit.',
+    description: 'Vite ! 60 secondes pour tout préparer, le budget est serré et les colonnes bloquées.',
     clientCount: 12,
     availableMachines: [MachineType.Grinder, MachineType.Brewer, MachineType.MilkSteamer, MachineType.CupFiller, MachineType.Conveyor],
     availableDrinks: [DrinkType.Espresso, DrinkType.Latte, DrinkType.Cappuccino],
@@ -151,11 +165,19 @@ export const LEVELS: LevelConfig[] = [
     orderTimeoutMs: 15000,
     maxFailedOrders: 3,
     hasMachineBreakdowns: false,
+    prepTimeSecs: 60,
+    budget: 320,
+    obstacles: [
+      { col: 3, row: 1 },
+      { col: 5, row: 4 },
+      { col: 8, row: 2 },
+      { col: 6, row: 6 },
+    ],
   },
   {
     id: 4,
     name: 'Chaos au Café',
-    description: 'Les machines tombent en panne ! Répare-les vite tout en servant les clients.',
+    description: 'Pannes, obstacles, 45s de prep et budget réduit ! Bonne chance.',
     clientCount: 15,
     availableMachines: [MachineType.Grinder, MachineType.Brewer, MachineType.MilkSteamer, MachineType.CupFiller, MachineType.Conveyor],
     availableDrinks: [DrinkType.Espresso, DrinkType.Latte, DrinkType.Cappuccino],
@@ -163,6 +185,16 @@ export const LEVELS: LevelConfig[] = [
     orderTimeoutMs: 14000,
     maxFailedOrders: 3,
     hasMachineBreakdowns: true,
+    prepTimeSecs: 45,
+    budget: 280,
+    obstacles: [
+      { col: 3, row: 2 },
+      { col: 4, row: 5 },
+      { col: 6, row: 1 },
+      { col: 8, row: 4 },
+      { col: 5, row: 6 },
+      { col: 9, row: 2 },
+    ],
   },
 ];
 

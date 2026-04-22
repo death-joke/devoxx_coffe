@@ -4,7 +4,7 @@ import { GridSystem } from '../systems/GridSystem';
 import { Machine } from '../systems/Machine';
 import { ConveyorSystem, ArrivalResult } from '../systems/ConveyorSystem';
 import { CustomerSystem } from '../systems/CustomerSystem';
-import { CELL_SIZE, GRID_OFFSET_X, GRID_OFFSET_Y, GRID_COLS, GRID_ROWS, LEVELS, ITEM_EMOJIS, ITEM_NAMES, ITEM_COLORS } from '../types/constants';
+import { CELL_SIZE, GRID_OFFSET_X, GRID_OFFSET_Y, GRID_COLS, GRID_ROWS, LEVELS, ITEM_EMOJIS, ITEM_NAMES, ITEM_COLORS, MACHINE_CONFIGS } from '../types/constants';
 import { MachineType, MachineState, ConveyorDirection, ItemType, LevelConfig, GameStats, Customer } from '../types/index';
 
 const CONVEYOR_SPEED_MS = 1200;
@@ -26,7 +26,9 @@ export class Game extends Scene {
   private currentLevel!: LevelConfig;
   private pendingAutoStart = false;
 
-  private stats: GameStats = { score: 0, level: 1, ordersServed: 0, ordersFailed: 0, consecutiveFailed: 0 };
+  private stats: GameStats = { score: 0, level: 1, ordersServed: 0, ordersFailed: 0, consecutiveFailed: 0, budget: -1 };
+
+  private obstacleGraphics: Phaser.GameObjects.Graphics[] = [];
 
   private pauseOverlay: Phaser.GameObjects.Container | null = null;
 
@@ -64,7 +66,7 @@ export class Game extends Scene {
     this.isPlaying = false;
     this.selectedMachine = null;
     this.destroyMode = false;
-    this.stats = { score: 0, level: 1, ordersServed: 0, ordersFailed: 0, consecutiveFailed: 0 };
+    this.stats = { score: 0, level: 1, ordersServed: 0, ordersFailed: 0, consecutiveFailed: 0, budget: -1 };
 
     this.gridGraphics = this.add.graphics();
     this.machineLayer = this.add.container(0, 0);
@@ -194,12 +196,23 @@ export class Game extends Scene {
     this.currentLevel = level;
     this.isPlaying = true;
     this.preparationPhase = true;
-    this.stats = { score: this.stats.score, level: level.id, ordersServed: 0, ordersFailed: 0, consecutiveFailed: 0 };
+    const startBudget = level.budget ?? -1;
+    this.stats = { score: this.stats.score, level: level.id, ordersServed: 0, ordersFailed: 0, consecutiveFailed: 0, budget: startBudget };
 
     // Reset grid
     this.clearAllMachines();
     this.grid.reset();
     this.conveyorSystem.clear();
+
+    // Clear any previous obstacle graphics
+    for (const g of this.obstacleGraphics) g.destroy();
+    this.obstacleGraphics = [];
+
+    // Place obstacles
+    for (const obs of level.obstacles ?? []) {
+      this.grid.setObstacle(obs.col, obs.row);
+      this.renderObstacle(obs.col, obs.row);
+    }
 
     // Setup customer system (but do NOT start it yet)
     this.customerSystem = new CustomerSystem(level);
@@ -378,9 +391,9 @@ export class Game extends Scene {
     localStorage.setItem('coffee_last_score', String(this.stats.score));
     const best = parseInt(localStorage.getItem('coffee_best_score') ?? '0', 10);
     if (this.stats.score > best) localStorage.setItem('coffee_best_score', String(this.stats.score));
+    const newBest = Math.max(this.stats.score, best);
     this.time.delayedCall(800, () => {
-      EventBus.emit('game-over');
-      this.scene.start('GameOver');
+      EventBus.emit('game-over', { score: this.stats.score, bestScore: newBest });
     });
   }
 
@@ -391,6 +404,13 @@ export class Game extends Scene {
   // ─── Machine placement ────────────────────────────────────────────────────────
 
   private placeMachine(col: number, row: number, type: MachineType): void {
+    // Budget check
+    const cost = MACHINE_CONFIGS[type].cost;
+    if (this.stats.budget !== -1 && cost > this.stats.budget) {
+      this.showFloatingText(col, row, '💸 Pas assez!', '#FF5722');
+      return;
+    }
+
     const id = `machine_${++this.machineCounter}`;
     const placed = this.grid.placeMachine(col, row, type, id);
     if (!placed) return;
@@ -398,6 +418,12 @@ export class Game extends Scene {
     const machine = new Machine(id, type, col, row);
     this.machines.set(id, machine);
     this.renderMachine(machine);
+
+    // Deduct budget
+    if (this.stats.budget !== -1) {
+      this.stats.budget -= cost;
+      this.emitStats();
+    }
 
     this.autoConnect(col, row);
   }
@@ -455,10 +481,11 @@ export class Game extends Scene {
     if (!cell?.machineId) return;
     const id = cell.machineId;
 
-    // Don't allow removing source machines
+    // Don't allow removing source machines or obstacles
     const machine = this.machines.get(id);
     if (machine?.type === MachineType.Source) return;
 
+    const machineType = machine?.type;
     this.grid.removeMachine(col, row);
     this.machines.delete(id);
 
@@ -469,6 +496,16 @@ export class Game extends Scene {
       visual.label.destroy();
       visual.indicator.destroy();
       this.machineVisuals.delete(id);
+    }
+
+    // Refund 75% of cost
+    if (machineType && this.stats.budget !== -1) {
+      const refund = Math.floor(MACHINE_CONFIGS[machineType].cost * 0.75);
+      if (refund > 0) {
+        this.stats.budget += refund;
+        this.showFloatingText(col, row, `+${refund}💰`, '#FFD700');
+        this.emitStats();
+      }
     }
 
     this.conveyorSystem.removeConnectionsAt(col, row);
@@ -542,6 +579,23 @@ export class Game extends Scene {
     g.lineStyle(2, isBroken ? 0xFF0000 : 0xFFFFFF, 0.3);
     g.strokeRoundedRect(x - half, y - half, half * 2, half * 2, 6);
     g.setDepth(4);
+  }
+
+  private renderObstacle(col: number, row: number): void {
+    const { x, y } = this.grid.gridToWorld(col, row);
+    const half = CELL_SIZE / 2 - 2;
+    const g = this.add.graphics();
+    g.fillStyle(0x222222, 1);
+    g.fillRoundedRect(x - half, y - half, half * 2, half * 2, 4);
+    g.lineStyle(2, 0x555555, 0.8);
+    g.strokeRoundedRect(x - half, y - half, half * 2, half * 2, 4);
+    // X pattern
+    g.lineStyle(3, 0x444444, 1);
+    g.lineBetween(x - half + 6, y - half + 6, x + half - 6, y + half - 6);
+    g.lineBetween(x + half - 6, y - half + 6, x - half + 6, y + half - 6);
+    g.setDepth(3);
+    this.add.text(x, y, '🚧', { fontSize: '18px' }).setOrigin(0.5).setDepth(4);
+    this.obstacleGraphics.push(g);
   }
 
   // ─── Customer visuals ─────────────────────────────────────────────────────────

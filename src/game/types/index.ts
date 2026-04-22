@@ -42,6 +42,7 @@ export interface GridCell {
   col: number;
   row: number;
   occupied: boolean;
+  isObstacle?: boolean;
   machineType?: MachineType;
   machineId?: string;
   conveyorDirection?: ConveyorDirection;
@@ -70,6 +71,7 @@ export interface MachineConfig {
   recipe?: Recipe;
   recipes?: Recipe[]; // alternative recipes (machine picks first matching)
   color: number;
+  cost: number; // budget cost to place
 }
 
 // ─── Order / Customer ─────────────────────────────────────────────────────────
@@ -106,6 +108,9 @@ export interface LevelConfig {
   orderTimeoutMs: number;
   maxFailedOrders: number;
   hasMachineBreakdowns: boolean;
+  prepTimeSecs?: number;           // countdown before day starts; undefined = unlimited
+  budget?: number;                 // starting budget; undefined = unlimited
+  obstacles?: Array<{ col: number; row: number }>; // impassable cells
 }
 
 // ─── Game State (shared via EventBus) ─────────────────────────────────────────
@@ -116,4 +121,5 @@ export interface GameStats {
   ordersServed: number;
   ordersFailed: number;
   consecutiveFailed: number;
+  budget: number; // remaining budget; -1 = unlimited
 }

@@ -1,5 +1,7 @@
+import React, { useState } from 'react';
 import { LevelConfig } from '../game/types/index';
 import { MACHINE_CONFIGS } from '../game/types/constants';
+import { HowToPlay } from './HowToPlay';
 
 interface LevelIntroProps {
   level: LevelConfig;
@@ -7,8 +9,10 @@ interface LevelIntroProps {
 }
 
 export function LevelIntro({ level, onStart }: LevelIntroProps) {
+  const [showHelp, setShowHelp] = useState(false);
   return (
     <div style={styles.overlay}>
+      {showHelp && <HowToPlay onClose={() => setShowHelp(false)} />}
       <div style={styles.card}>
         <div style={styles.levelBadge}>Niveau {level.id}</div>
         <h2 style={styles.title}>☕ {level.name}</h2>
@@ -35,9 +39,14 @@ export function LevelIntro({ level, onStart }: LevelIntroProps) {
           <div style={styles.warning}>⚠️ Attention : pannes de machines possibles !</div>
         )}
 
-        <button style={styles.startBtn} onClick={onStart}>
-          C'est parti ! ▶
-        </button>
+        <div style={styles.actions}>
+          <button style={styles.helpBtn} onClick={() => setShowHelp(true)}>
+            ❓ Comment jouer ?
+          </button>
+          <button style={styles.startBtn} onClick={onStart}>
+            C'est parti ! ▶
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -86,9 +95,26 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 6, padding: '8px 16px',
     color: '#FF5722', fontSize: 13, marginBottom: 16,
   },
-  startBtn: {
+  actions: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginTop: 16,
-    padding: '12px 40px',
+    gap: 10,
+  },
+  helpBtn: {
+    padding: '10px 16px',
+    backgroundColor: 'transparent',
+    border: '1px solid #D2691E',
+    borderRadius: 8,
+    color: '#D2691E',
+    fontSize: 13,
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    fontFamily: 'Arial',
+  },
+  startBtn: {
+    padding: '12px 32px',
     backgroundColor: '#D2691E',
     border: 'none', borderRadius: 8,
     color: '#FFF', fontSize: 18, fontWeight: 'bold',

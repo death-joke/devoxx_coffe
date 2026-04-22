@@ -50,7 +50,18 @@ export class GridSystem {
 
   isCellFree(col: number, row: number): boolean {
     const cell = this.getCell(col, row);
-    return cell !== null && !cell.occupied;
+    return cell !== null && !cell.occupied && !cell.isObstacle;
+  }
+
+  setObstacle(col: number, row: number): void {
+    const cell = this.getCell(col, row);
+    if (!cell) return;
+    cell.isObstacle = true;
+    cell.occupied = true; // treat as occupied so machines can't be placed
+  }
+
+  getObstacleCells(): GridCell[] {
+    return this.getAllCells().filter(c => c.isObstacle);
   }
 
   placeMachine(col: number, row: number, type: MachineType, id: string, direction?: ConveyorDirection): boolean {
