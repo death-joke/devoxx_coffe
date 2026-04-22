@@ -1,13 +1,13 @@
 import { GameObjects, Scene } from 'phaser';
-
 import { EventBus } from '../EventBus';
 
 export class MainMenu extends Scene
 {
-    background: GameObjects.Image;
-    logo: GameObjects.Image;
+    background: GameObjects.Rectangle;
     title: GameObjects.Text;
-    logoTween: Phaser.Tweens.Tween | null;
+    subtitle: GameObjects.Text;
+    startButton: GameObjects.Text;
+    bestScoreText: GameObjects.Text;
 
     constructor ()
     {
@@ -16,61 +16,74 @@ export class MainMenu extends Scene
 
     create ()
     {
-        this.background = this.add.image(512, 384, 'background');
+        const { width } = this.scale;
+        const cx = width / 2;
 
-        this.logo = this.add.image(512, 300, 'logo').setDepth(100);
+        // Background
+        this.cameras.main.setBackgroundColor(0x2C1810);
 
-        this.title = this.add.text(512, 460, 'Main Menu', {
-            fontFamily: 'Arial Black', fontSize: 38, color: '#ffffff',
-            stroke: '#000000', strokeThickness: 8,
-            align: 'center'
-        }).setOrigin(0.5).setDepth(100);
+        // Decorative top bar
+        const bar = this.add.rectangle(cx, 0, width, 8, 0xD2691E).setOrigin(0.5, 0);
+        bar;
+
+        // Title
+        this.add.text(cx, 160, '☕', { fontSize: '80px' }).setOrigin(0.5);
+
+        this.title = this.add.text(cx, 270, 'Coffee Factory', {
+            fontFamily: 'Arial Black', fontSize: 52, color: '#D2691E',
+            stroke: '#1A0F0A', strokeThickness: 8,
+        }).setOrigin(0.5);
+
+        this.subtitle = this.add.text(cx, 340, 'Build your perfect coffee chain!', {
+            fontFamily: 'Arial', fontSize: 20, color: '#A0856E',
+        }).setOrigin(0.5);
+
+        // Best score
+        const best = parseInt(localStorage.getItem('coffee_best_score') ?? '0', 10);
+        this.bestScoreText = this.add.text(cx, 400, best > 0 ? `🏆 Meilleur score : ${best}` : '', {
+            fontFamily: 'Arial', fontSize: 18, color: '#FFD700',
+        }).setOrigin(0.5);
+
+        // Start button
+        this.startButton = this.add.text(cx, 500, '▶  JOUER', {
+            fontFamily: 'Arial Black', fontSize: 32, color: '#FFFFFF',
+            stroke: '#D2691E', strokeThickness: 4,
+            backgroundColor: '#D2691E',
+            padding: { x: 32, y: 14 },
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+        this.startButton.on('pointerover', () => this.startButton.setStyle({ backgroundColor: '#A0522D' }));
+        this.startButton.on('pointerout', () => this.startButton.setStyle({ backgroundColor: '#D2691E' }));
+        this.startButton.on('pointerdown', () => this.changeScene());
+
+        // Decorative steam particles (simple tweens)
+        this.addSteamEffect(cx - 60, 230);
+        this.addSteamEffect(cx, 220);
+        this.addSteamEffect(cx + 60, 230);
 
         EventBus.emit('current-scene-ready', this);
     }
-    
-    changeScene ()
-    {
-        if (this.logoTween)
-        {
-            this.logoTween.stop();
-            this.logoTween = null;
-        }
 
-        this.scene.start('Game');
+    private addSteamEffect(x: number, y: number): void
+    {
+        const steam = this.add.text(x, y, '~', {
+            fontSize: '24px', color: '#FFFFFF', alpha: 0
+        } as Phaser.Types.GameObjects.Text.TextStyle).setOrigin(0.5);
+
+        this.tweens.add({
+            targets: steam,
+            y: y - 40,
+            alpha: { from: 0.5, to: 0 },
+            duration: 1500 + Math.random() * 800,
+            delay: Math.random() * 1000,
+            repeat: -1,
+            ease: 'Sine.easeOut',
+        });
     }
 
-    moveLogo (vueCallback: ({ x, y }: { x: number, y: number }) => void)
+    changeScene ()
     {
-        if (this.logoTween)
-        {
-            if (this.logoTween.isPlaying())
-            {
-                this.logoTween.pause();
-            }
-            else
-            {
-                this.logoTween.play();
-            }
-        } 
-        else
-        {
-            this.logoTween = this.tweens.add({
-                targets: this.logo,
-                x: { value: 750, duration: 3000, ease: 'Back.easeInOut' },
-                y: { value: 80, duration: 1500, ease: 'Sine.easeOut' },
-                yoyo: true,
-                repeat: -1,
-                onUpdate: () => {
-                    if (vueCallback)
-                    {
-                        vueCallback({
-                            x: Math.floor(this.logo.x),
-                            y: Math.floor(this.logo.y)
-                        });
-                    }
-                }
-            });
-        }
+        EventBus.emit('start-game');
+        this.scene.start('Game');
     }
 }
